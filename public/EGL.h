@@ -10,13 +10,23 @@
 
 #include <EGL/egl.h>
 
+#include <slog2.h>
+
 #define EGL_DEBUG 1
 
 /*
+ * Check if the debug library is initialized or not
+ */
+EGLBoolean eglIsDebugLibraryInitialized();
+
+/*
  * Enable or disable logging.
- *
- * Logging is written to SLOG2's default buffer.
  */
 void eglDebugEnableLogging(EGLBoolean loggingEnabled);
+
+/*
+ * The log to use, or NULL if the default log should be used
+ */
+void eglDebugLog(slog2_buffer_t buffer);
 
 #endif
