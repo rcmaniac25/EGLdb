@@ -67,6 +67,7 @@
 #define GEN_FUNC_NORET_DEF(x,...) typedef void (*GEN_FUNC(x))(__VA_ARGS__);
 #define GEN_FUNC_DEF(ret,x,...) typedef ret (*GEN_FUNC(x))(__VA_ARGS__);
 #define GEN_FUNCPTR_DEF(x) GEN_FUNC(x) GEN_FUNCPTR(x) = NULL;
+#define GEN_FUNCPTR_SPEC_DEF(t,x) t GEN_FUNCPTR(x) = NULL;
 
 #define GEN_LIB_CLEANUP(x,msg) void x()\
 {\

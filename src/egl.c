@@ -8,6 +8,7 @@
 #include <dlfcn.h>
 
 #include <EGL.h>
+#include <EGL/eglext.h>
 
 #include "DebugMacros.h"
 
@@ -38,6 +39,16 @@ typedef struct _eglFunc {
 #define EGL_DEBUG_FUNCCALL_FORMAT_RET_STRING(func,paramFormat,ret,...) GEN_DEBUG_FUNCCALL_FORMAT_RET_STRING(EGL_DEBUG_PREFIX,func,paramFormat,ret,__VA_ARGS__)
 #define EGL_DEBUG_FUNCCALL_FORMAT_RET_PTR(func,paramFormat,ret,...) GEN_DEBUG_FUNCCALL_FORMAT_RET_PTR(EGL_DEBUG_PREFIX,func,paramFormat,ret,__VA_ARGS__)
 #define EGL_DEBUG_FUNCCALL_FORMAT_RET_BOOL(func,paramFormat,ret,...) GEN_DEBUG_FUNCCALL_FORMAT_RET_BOOL(EGL_DEBUG_PREFIX,EGL_TRUE,EGL_FALSE,func,paramFormat,ret,__VA_ARGS__)
+
+#define EGL_DEBUG_FUNCCALL_ECHECK_FORMAT_RET_STRING(x,paramFormat,ret,...) EGL_DEBUG_FUNCCALL_FORMAT_RET_STRING(x,paramFormat,ret,__VA_ARGS__)\
+		EGL_CHECK_ERROR(x);\
+		return ret;
+#define EGL_DEBUG_FUNCCALL_ECHECK_FORMAT_RET_PTR(x,paramFormat,ret,...) EGL_DEBUG_FUNCCALL_FORMAT_RET_PTR(x,paramFormat,ret,__VA_ARGS__)\
+		EGL_CHECK_ERROR(x);\
+		return ret;
+#define EGL_DEBUG_FUNCCALL_ECHECK_FORMAT_RET_BOOL(x,paramFormat,ret,...) EGL_DEBUG_FUNCCALL_FORMAT_RET_BOOL(x,paramFormat,ret,__VA_ARGS__)\
+		EGL_CHECK_ERROR(x);\
+		return ret;
 
 #define EGLRUN_NRET(x,a) if(eglInit()) \
 {\
@@ -86,7 +97,20 @@ GEN_FUNC_DEF(EGLBoolean,eglBindAPI,EGLenum api)
 GEN_FUNC_DEF(EGLenum,eglQueryAPI,void)
 GEN_FUNC_DEF(EGLBoolean,eglWaitClient,void)
 GEN_FUNC_DEF(EGLBoolean,eglReleaseThread,void)
-//TODO
+GEN_FUNC_DEF(EGLSurface,eglCreatePbufferFromClientBuffer,EGLDisplay dpy, EGLenum buftype, EGLClientBuffer buffer, EGLConfig config, const EGLint* attrib_list)
+GEN_FUNC_DEF(EGLBoolean,eglSurfaceAttrib,EGLDisplay dpy, EGLSurface surface, EGLint attribute, EGLint value)
+GEN_FUNC_DEF(EGLBoolean,eglBindTexImage,EGLDisplay dpy, EGLSurface surface, EGLint buffer)
+GEN_FUNC_DEF(EGLBoolean,eglReleaseTexImage,EGLDisplay dpy, EGLSurface surface, EGLint buffer)
+GEN_FUNC_DEF(EGLBoolean,eglSwapInterval,EGLDisplay dpy, EGLint interval)
+GEN_FUNC_DEF(EGLContext,eglCreateContext,EGLDisplay dpy, EGLConfig config, EGLContext share_context, const EGLint* attrib_list)
+GEN_FUNC_DEF(EGLBoolean,eglDestroyContext,EGLDisplay dpy, EGLContext ctx)
+GEN_FUNC_DEF(EGLBoolean,eglMakeCurrent,EGLDisplay dpy, EGLSurface draw, EGLSurface read, EGLContext ctx)
+GEN_FUNC_DEF(EGLContext,eglGetCurrentContext,void)
+GEN_FUNC_DEF(EGLSurface,eglGetCurrentSurface,EGLint readdraw)
+GEN_FUNC_DEF(EGLDisplay,eglGetCurrentDisplay,void)
+GEN_FUNC_DEF(EGLBoolean,eglQueryContext,EGLDisplay dpy, EGLContext ctx, EGLint attribute, EGLint* value)
+GEN_FUNC_DEF(EGLBoolean,eglWaitGL,void)
+GEN_FUNC_DEF(EGLBoolean,eglWaitNative,EGLint engine)
 GEN_FUNC_DEF(EGLBoolean,eglSwapBuffers,EGLDisplay dpy, EGLSurface surface);
 GEN_FUNC_DEF(EGLBoolean,eglCopyBuffers,EGLDisplay dpy, EGLSurface surface, EGLNativePixmapType target)
 GEN_FUNC_DEF(__eglMustCastToProperFunctionPointerType,eglGetProcAddress,const char* procname)
@@ -109,7 +133,20 @@ GEN_FUNCPTR_DEF(eglBindAPI)
 GEN_FUNCPTR_DEF(eglQueryAPI)
 GEN_FUNCPTR_DEF(eglWaitClient)
 GEN_FUNCPTR_DEF(eglReleaseThread)
-//TODO
+GEN_FUNCPTR_DEF(eglCreatePbufferFromClientBuffer)
+GEN_FUNCPTR_DEF(eglSurfaceAttrib)
+GEN_FUNCPTR_DEF(eglBindTexImage)
+GEN_FUNCPTR_DEF(eglReleaseTexImage)
+GEN_FUNCPTR_DEF(eglSwapInterval)
+GEN_FUNCPTR_DEF(eglCreateContext)
+GEN_FUNCPTR_DEF(eglDestroyContext)
+GEN_FUNCPTR_DEF(eglMakeCurrent)
+GEN_FUNCPTR_DEF(eglGetCurrentContext)
+GEN_FUNCPTR_DEF(eglGetCurrentSurface)
+GEN_FUNCPTR_DEF(eglGetCurrentDisplay)
+GEN_FUNCPTR_DEF(eglQueryContext)
+GEN_FUNCPTR_DEF(eglWaitGL)
+GEN_FUNCPTR_DEF(eglWaitNative)
 GEN_FUNCPTR_DEF(eglSwapBuffers)
 GEN_FUNCPTR_DEF(eglCopyBuffers)
 GEN_FUNCPTR_DEF(eglGetProcAddress)
@@ -148,15 +185,41 @@ EGLFunction functions[] = {
 		EGLFUNCGROUP(eglQueryAPI, &functions[15]),
 		EGLFUNCGROUP_ERRORS(eglWaitClient, &functions[16], EGLFUNC_ERROR(EGL_BAD_CURRENT_SURFACE)),
 		EGLFUNCGROUP(eglReleaseThread, &functions[17]),
-		//TODO
-		EGLFUNCGROUP_ERRORS(eglSwapBuffers, &functions[18],
+		EGLFUNCGROUP_ERRORS(eglCreatePbufferFromClientBuffer, &functions[18],
+				EGLFUNC_ERROR(EGL_BAD_DISPLAY), EGLFUNC_ERROR(EGL_NOT_INITIALIZED), EGLFUNC_ERROR(EGL_BAD_CONFIG), EGLFUNC_ERROR(EGL_BAD_PARAMETER), EGLFUNC_ERROR(EGL_BAD_ACCESS),
+				EGLFUNC_ERROR(EGL_BAD_ALLOC), EGLFUNC_ERROR(EGL_BAD_ATTRIBUTE), EGLFUNC_ERROR(EGL_BAD_MATCH)),
+		EGLFUNCGROUP_ERRORS(eglSurfaceAttrib, &functions[19],
+				EGLFUNC_ERROR(EGL_BAD_DISPLAY), EGLFUNC_ERROR(EGL_BAD_MATCH), EGLFUNC_ERROR(EGL_NOT_INITIALIZED), EGLFUNC_ERROR(EGL_BAD_SURFACE), EGLFUNC_ERROR(EGL_BAD_ATTRIBUTE)),
+		EGLFUNCGROUP_ERRORS(eglBindTexImage, &functions[19],
+				EGLFUNC_ERROR(EGL_BAD_ACCESS), EGLFUNC_ERROR(EGL_BAD_MATCH), EGLFUNC_ERROR(EGL_BAD_SURFACE)),
+		EGLFUNCGROUP_ERRORS(eglReleaseTexImage, &functions[20],
+				EGLFUNC_ERROR(EGL_BAD_MATCH), EGLFUNC_ERROR(EGL_BAD_SURFACE)),
+		EGLFUNCGROUP_ERRORS(eglSwapInterval, &functions[21],
+				EGLFUNC_ERROR(EGL_BAD_CONTEXT), EGLFUNC_ERROR(EGL_BAD_SURFACE)),
+		EGLFUNCGROUP_ERRORS(eglCreateContext, &functions[22],
+				EGLFUNC_ERROR(EGL_BAD_MATCH), EGLFUNC_ERROR(EGL_BAD_DISPLAY), EGLFUNC_ERROR(EGL_NOT_INITIALIZED), EGLFUNC_ERROR(EGL_BAD_CONFIG), EGLFUNC_ERROR(EGL_BAD_CONTEXT),
+				EGLFUNC_ERROR(EGL_BAD_ATTRIBUTE), EGLFUNC_ERROR(EGL_BAD_ALLOC)),
+		EGLFUNCGROUP_ERRORS(eglDestroyContext, &functions[23],
+				EGLFUNC_ERROR(EGL_BAD_DISPLAY), EGLFUNC_ERROR(EGL_NOT_INITIALIZED), EGLFUNC_ERROR(EGL_BAD_CONTEXT)),
+		EGLFUNCGROUP_ERRORS(eglMakeCurrent, &functions[24],
+				EGLFUNC_ERROR(EGL_BAD_DISPLAY), EGLFUNC_ERROR(EGL_NOT_INITIALIZED), EGLFUNC_ERROR(EGL_BAD_SURFACE), EGLFUNC_ERROR(EGL_BAD_CONTEXT), EGLFUNC_ERROR(EGL_BAD_MATCH),
+				EGLFUNC_ERROR(EGL_BAD_ACCESS), EGLFUNC_ERROR(EGL_BAD_NATIVE_PIXMAP), EGLFUNC_ERROR(EGL_BAD_NATIVE_WINDOW), EGLFUNC_ERROR(EGL_BAD_CURRENT_SURFACE),
+				EGLFUNC_ERROR(EGL_BAD_ALLOC), EGLFUNC_ERROR(EGL_CONTEXT_LOST)),
+		EGLFUNCGROUP(eglGetCurrentContext, &functions[25]),
+		EGLFUNCGROUP(eglGetCurrentSurface, &functions[26]),
+		EGLFUNCGROUP(eglGetCurrentDisplay, &functions[27]),
+		EGLFUNCGROUP_ERRORS(eglQueryContext, &functions[28],
+				EGLFUNC_ERROR(EGL_BAD_DISPLAY), EGLFUNC_ERROR(EGL_NOT_INITIALIZED), EGLFUNC_ERROR(EGL_BAD_CONTEXT), EGLFUNC_ERROR(EGL_BAD_ATTRIBUTE)),
+		EGLFUNCGROUP_ERRORS(eglWaitGL, &functions[29], EGLFUNC_ERROR(EGL_BAD_CURRENT_SURFACE)),
+		EGLFUNCGROUP_ERRORS(eglWaitNative, &functions[30], EGLFUNC_ERROR(EGL_BAD_CURRENT_SURFACE)),
+		EGLFUNCGROUP_ERRORS(eglSwapBuffers, &functions[31],
 				EGLFUNC_ERROR(EGL_BAD_DISPLAY), EGLFUNC_ERROR(EGL_NOT_INITIALIZED), EGLFUNC_ERROR(EGL_BAD_SURFACE), EGLFUNC_ERROR(EGL_CONTEXT_LOST)),
-		EGLFUNCGROUP_ERRORS(eglCopyBuffers, &functions[19],
+		EGLFUNCGROUP_ERRORS(eglCopyBuffers, &functions[32],
 				EGLFUNC_ERROR(EGL_BAD_DISPLAY), EGLFUNC_ERROR(EGL_NOT_INITIALIZED), EGLFUNC_ERROR(EGL_BAD_SURFACE), EGLFUNC_ERROR(EGL_BAD_NATIVE_PIXMAP), EGLFUNC_ERROR(EGL_BAD_MATCH),
 				EGLFUNC_ERROR(EGL_CONTEXT_LOST)),
-		EGLFUNCGROUP(eglGetProcAddress, &functions[20]),
-		EGLFUNCGROUP_NOPTR(eglIsDebugLibraryInitialized, &functions[21]),
-		EGLFUNCGROUP_NOPTR(eglDebugEnableLogging, &functions[22]),
+		EGLFUNCGROUP(eglGetProcAddress, &functions[33]),
+		EGLFUNCGROUP_NOPTR(eglIsDebugLibraryInitialized, &functions[34]),
+		EGLFUNCGROUP_NOPTR(eglDebugEnableLogging, &functions[35]),
 		EGLFUNCGROUP_NOPTR(eglDebugLog, NULL)
 };
 
@@ -204,7 +267,7 @@ GEN_LIB_CLEANUP(eglCleanup,EGL_DEBUG_PREFIX)
 void __eglCheckErrors(const char* funcName, EGLFunction* func)
 {
 	EGLError* err;
-	if(funcName && func && func->errors[0].value != NULL)
+	if(loggingEnabled && funcName && func && func->errors[0].value != NULL)
 	{
 		EGLint error = GEN_FUNCPTR(eglGetError)();
 		if(error != EGL_SUCCESS)
@@ -258,9 +321,7 @@ EGLBoolean eglInitialize(EGLDisplay dpy, EGLint *major, EGLint *minor)
 	if(eglInit())
 	{
 		EGLBoolean ret = GEN_FUNCPTR(eglInitialize)(dpy, major, minor);
-		EGL_DEBUG_FUNCCALL_FORMAT_RET_BOOL(eglInitialize, "%p, %p, %p", ret, SLOG2_FA_STAR(dpy), SLOG2_FA_STAR(major), SLOG2_FA_STAR(minor))
-		EGL_CHECK_ERROR(eglInitialize);
-		return ret;
+		EGL_DEBUG_FUNCCALL_ECHECK_FORMAT_RET_BOOL(eglInitialize, "%p, %p, %p", ret, SLOG2_FA_STAR(dpy), SLOG2_FA_STAR(major), SLOG2_FA_STAR(minor))
 	}
 	EGL_DEBUG_MESSAGE(eglInitialize, "Init failed")
 	return EGL_FALSE;
@@ -271,9 +332,7 @@ EGLBoolean eglTerminate(EGLDisplay dpy)
 	if(eglInit())
 	{
 		EGLBoolean ret = GEN_FUNCPTR(eglTerminate)(dpy);
-		EGL_DEBUG_FUNCCALL_FORMAT_RET_BOOL(eglTerminate, "%p", ret, SLOG2_FA_STAR(dpy))
-		EGL_CHECK_ERROR(eglInitialize);
-		return ret;
+		EGL_DEBUG_FUNCCALL_ECHECK_FORMAT_RET_BOOL(eglTerminate, "%p", ret, SLOG2_FA_STAR(dpy))
 	}
 	EGL_DEBUG_MESSAGE(eglTerminate, "Init failed")
 	return EGL_FALSE;
@@ -284,9 +343,7 @@ const char* eglQueryString(EGLDisplay dpy, EGLint name)
 	if(eglInit())
 	{
 		const char* ret = GEN_FUNCPTR(eglQueryString)(dpy, name);
-		EGL_DEBUG_FUNCCALL_FORMAT_RET_STRING(eglQueryString, "%p, %d", ret, SLOG2_FA_STAR(dpy), SLOG2_FA_SIGNED(name))
-		EGL_CHECK_ERROR(eglQueryString);
-		return ret;
+		EGL_DEBUG_FUNCCALL_ECHECK_FORMAT_RET_STRING(eglQueryString, "%p, %d", ret, SLOG2_FA_STAR(dpy), SLOG2_FA_SIGNED(name))
 	}
 	EGL_DEBUG_MESSAGE(eglQueryString, "Init failed")
 	return NULL;
@@ -297,9 +354,7 @@ EGLBoolean eglGetConfigs(EGLDisplay dpy, EGLConfig* configs, EGLint config_size,
 	if(eglInit())
 	{
 		EGLBoolean ret = GEN_FUNCPTR(eglGetConfigs)(dpy, configs, config_size, num_config);
-		EGL_DEBUG_FUNCCALL_FORMAT_RET_BOOL(eglGetConfigs, "%p, %p, %d, %p", ret, SLOG2_FA_STAR(dpy), SLOG2_FA_STAR(configs), SLOG2_FA_SIGNED(config_size), SLOG2_FA_STAR(num_config))
-		EGL_CHECK_ERROR(eglGetConfigs);
-		return ret;
+		EGL_DEBUG_FUNCCALL_ECHECK_FORMAT_RET_BOOL(eglGetConfigs, "%p, %p, %d, %p", ret, SLOG2_FA_STAR(dpy), SLOG2_FA_STAR(configs), SLOG2_FA_SIGNED(config_size), SLOG2_FA_STAR(num_config))
 	}
 	EGL_DEBUG_MESSAGE(eglGetConfigs, "Init failed")
 	return EGL_FALSE;
@@ -307,13 +362,23 @@ EGLBoolean eglGetConfigs(EGLDisplay dpy, EGLConfig* configs, EGLint config_size,
 
 EGLBoolean eglChooseConfig(EGLDisplay dpy, const EGLint* attrib_list, EGLConfig* configs, EGLint config_size, EGLint* num_config)
 {
-	//TODO
+	if(eglInit())
+	{
+		EGLBoolean ret = GEN_FUNCPTR(eglChooseConfig)(dpy, attrib_list, configs, config_size, num_config);
+		EGL_DEBUG_FUNCCALL_ECHECK_FORMAT_RET_BOOL(eglChooseConfig, "%p, %p, %p, %d, %p", ret, SLOG2_FA_STAR(dpy), SLOG2_FA_STAR(attrib_list), SLOG2_FA_STAR(configs), SLOG2_FA_SIGNED(config_size), SLOG2_FA_STAR(num_config))
+	}
+	EGL_DEBUG_MESSAGE(eglChooseConfig, "Init failed")
 	return EGL_FALSE;
 }
 
 EGLBoolean eglGetConfigAttrib(EGLDisplay dpy, EGLConfig config, EGLint attribute, EGLint* value)
 {
-	//TODO
+	if(eglInit())
+	{
+		EGLBoolean ret = GEN_FUNCPTR(eglGetConfigAttrib)(dpy, config, attribute, value);
+		EGL_DEBUG_FUNCCALL_ECHECK_FORMAT_RET_BOOL(eglGetConfigAttrib, "%p, %p, %d, %p", ret, SLOG2_FA_STAR(dpy), SLOG2_FA_STAR(config), SLOG2_FA_SIGNED(attribute), SLOG2_FA_STAR(value))
+	}
+	EGL_DEBUG_MESSAGE(eglGetConfigAttrib, "Init failed")
 	return EGL_FALSE;
 }
 
