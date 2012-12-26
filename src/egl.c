@@ -35,6 +35,9 @@ typedef struct _eglFunc {
 #define EGL_DEBUG_MESSAGE(func,message) GEN_DEBUG_MESSAGE(EGL_DEBUG_PREFIX,func,message)
 #define EGL_DEBUG_MESSAGE_FORMAT(func,format,...) GEN_DEBUG_MESSAGE_FORMAT(EGL_DEBUG_PREFIX,func,format,__VA_ARGS__)
 
+#define EGL_DEBUG_FUNCCALL_RET_STRING(func,ret) GEN_DEBUG_FUNCCALL_RET_STRING(EGL_DEBUG_PREFIX,func,ret)
+#define EGL_DEBUG_FUNCCALL_RET_BOOL(func,ret) GEN_DEBUG_FUNCCALL_RET_BOOL(EGL_DEBUG_PREFIX,EGL_TRUE,EGL_FALSE,func,ret)
+
 #define EGL_DEBUG_FUNCCALL_FORMAT(func,paramFormat,...) GEN_DEBUG_FUNCCALL_FORMAT(EGL_DEBUG_PREFIX,func,paramFormat,__VA_ARGS__)
 #define EGL_DEBUG_FUNCCALL_FORMAT_RET_STRING(func,paramFormat,ret,...) GEN_DEBUG_FUNCCALL_FORMAT_RET_STRING(EGL_DEBUG_PREFIX,func,paramFormat,ret,__VA_ARGS__)
 #define EGL_DEBUG_FUNCCALL_FORMAT_RET_PTR(func,paramFormat,ret,...) GEN_DEBUG_FUNCCALL_FORMAT_RET_PTR(EGL_DEBUG_PREFIX,func,paramFormat,ret,__VA_ARGS__)
@@ -384,49 +387,109 @@ EGLBoolean eglGetConfigAttrib(EGLDisplay dpy, EGLConfig config, EGLint attribute
 
 EGLSurface eglCreateWindowSurface(EGLDisplay dpy, EGLConfig config, EGLNativeWindowType win, const EGLint* attrib_list)
 {
-	//TODO
+	if(eglInit())
+	{
+		EGLSurface surf = GEN_FUNCPTR(eglCreateWindowSurface)(dpy, config, win, attrib_list);
+		EGL_DEBUG_FUNCCALL_ECHECK_FORMAT_RET_PTR(eglCreateWindowSurface, "%p, %p, %p, %p", surf, SLOG2_FA_STAR(dpy), SLOG2_FA_STAR(config), SLOG2_FA_STAR(win), SLOG2_FA_STAR(attrib_list))
+	}
+	EGL_DEBUG_MESSAGE(eglCreateWindowSurface, "Init failed")
 	return EGL_NO_SURFACE;
 }
 
 EGLSurface eglCreatePbufferSurface(EGLDisplay dpy, EGLConfig config, const EGLint* attrib_list)
 {
-	//TODO
+	if(eglInit())
+	{
+		EGLSurface surf = GEN_FUNCPTR(eglCreatePbufferSurface)(dpy, config, attrib_list);
+		EGL_DEBUG_FUNCCALL_ECHECK_FORMAT_RET_PTR(eglCreatePbufferSurface, "%p, %p, %p", surf, SLOG2_FA_STAR(dpy), SLOG2_FA_STAR(config), SLOG2_FA_STAR(attrib_list))
+	}
+	EGL_DEBUG_MESSAGE(eglCreatePbufferSurface, "Init failed")
 	return EGL_NO_SURFACE;
 }
 
 EGLSurface eglCreatePixmapSurface(EGLDisplay dpy, EGLConfig config, EGLNativePixmapType pixmap, const EGLint* attrib_list)
 {
-	//TODO
+	if(eglInit())
+	{
+		EGLSurface surf = GEN_FUNCPTR(eglCreatePixmapSurface)(dpy, config, pixmap, attrib_list);
+		EGL_DEBUG_FUNCCALL_ECHECK_FORMAT_RET_PTR(eglCreatePixmapSurface, "%p, %p, %p, %p", surf, SLOG2_FA_STAR(dpy), SLOG2_FA_STAR(config), SLOG2_FA_STAR(pixmap), SLOG2_FA_STAR(attrib_list))
+	}
+	EGL_DEBUG_MESSAGE(eglCreatePixmapSurface, "Init failed")
 	return EGL_NO_SURFACE;
 }
 
 EGLBoolean eglDestroySurface(EGLDisplay dpy, EGLSurface surface)
 {
-	//TODO
+	if(eglInit())
+	{
+		EGLBoolean ret = GEN_FUNCPTR(eglDestroySurface)(dpy, surface);
+		EGL_DEBUG_FUNCCALL_ECHECK_FORMAT_RET_BOOL(eglDestroySurface, "%p, %p", ret, SLOG2_FA_STAR(dpy), SLOG2_FA_STAR(surface))
+	}
+	EGL_DEBUG_MESSAGE(eglDestroySurface, "Init failed")
 	return EGL_FALSE;
 }
 
 EGLBoolean eglQuerySurface(EGLDisplay dpy, EGLSurface surface, EGLint attribute, EGLint* value)
 {
-	//TODO
+	if(eglInit())
+	{
+		EGLBoolean ret = GEN_FUNCPTR(eglQuerySurface)(dpy, surface, attribute, value);
+		EGL_DEBUG_FUNCCALL_ECHECK_FORMAT_RET_BOOL(eglQuerySurface, "%p, %p, %d, %p", ret, SLOG2_FA_STAR(dpy), SLOG2_FA_STAR(surface), SLOG2_FA_SIGNED(attribute), SLOG2_FA_STAR(value))
+	}
+	EGL_DEBUG_MESSAGE(eglQuerySurface, "Init failed")
 	return EGL_FALSE;
 }
 
 EGLBoolean eglBindAPI(EGLenum api)
 {
-	//TODO
+	if(eglInit())
+	{
+		EGLBoolean ret = GEN_FUNCPTR(eglBindAPI)(api);
+		EGL_DEBUG_FUNCCALL_ECHECK_FORMAT_RET_BOOL(eglBindAPI, "%d", ret, SLOG2_FA_SIGNED(api))
+	}
+	EGL_DEBUG_MESSAGE(eglBindAPI, "Init failed")
 	return EGL_FALSE;
 }
 
 EGLenum eglQueryAPI()
 {
-	//TODO
+	const char* api;
+	if(eglInit())
+	{
+		EGLenum ret = GEN_FUNCPTR(eglQueryAPI)();
+		switch(ret)
+		{
+			case EGL_OPENGL_ES_API:
+				api = GEN_STR_HELPER(EGL_OPENGL_ES_API);
+				break;
+			case EGL_OPENVG_API:
+				api = GEN_STR_HELPER(EGL_OPENVG_API);
+				break;
+			case EGL_OPENGL_API:
+				api = GEN_STR_HELPER(EGL_OPENGL_API);
+				break;
+			default:
+				api = "?";
+				break;
+		}
+		EGL_DEBUG_FUNCCALL_RET_STRING(eglQueryAPI,api)
+		EGL_CHECK_ERROR(eglQueryAPI);
+		return ret;
+	}
+	EGL_DEBUG_MESSAGE(eglQueryAPI, "Init failed")
 	return 0;
 }
 
 EGLBoolean eglWaitClient()
 {
-	//TODO
+	if(eglInit())
+	{
+		EGLBoolean ret = GEN_FUNCPTR(eglWaitClient)();
+		EGL_DEBUG_FUNCCALL_RET_BOOL(eglWaitClient, ret)
+		EGL_CHECK_ERROR(eglWaitClient);
+		return ret;
+	}
+	EGL_DEBUG_MESSAGE(eglWaitClient, "Init failed")
 	return EGL_FALSE;
 }
 
@@ -435,8 +498,7 @@ EGLBoolean eglReleaseThread()
 	if(eglInit())
 	{
 		EGLBoolean ret = GEN_FUNCPTR(eglReleaseThread)();
-		const char* result = ret == EGL_FALSE ? "EGL_FALSE" : "EGL_TRUE";
-		EGL_DEBUG_MESSAGE_FORMAT(eglReleaseThread, "%s", SLOG2_FA_STRING(result))
+		EGL_DEBUG_FUNCCALL_RET_BOOL(eglReleaseThread,ret)
 		eglCleanup();
 		return ret;
 	}

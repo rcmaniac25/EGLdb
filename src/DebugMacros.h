@@ -41,6 +41,12 @@
 #define GEN_DEBUG_FUNCCALL_RET_SIGNED(prefix,func,ret) if(loggingEnabled) {const char* __eglDebugMessageFormatFunc__ = GEN_NON_STR_TO_STR(func);\
 	int retValue = ret;\
 	slog2fa(debugBuffer, 0, SLOG2_INFO, prefix "-%s() = %d", SLOG2_FA_STRING(__eglDebugMessageFormatFunc__), SLOG2_FA_SIGNED(retValue), SLOG2_FA_END);}
+#define GEN_DEBUG_FUNCCALL_RET_PTR(prefix,func,ret) if(loggingEnabled) {const char* __eglDebugMessageFormatFunc__ = GEN_NON_STR_TO_STR(func);\
+	void* retValue = ret;\
+	slog2fa(debugBuffer, 0, SLOG2_INFO, prefix "-%s() = %p", SLOG2_FA_STRING(__eglDebugMessageFormatFunc__), SLOG2_FA_STAR(retValue), SLOG2_FA_END);}
+#define GEN_DEBUG_FUNCCALL_RET_BOOL(prefix,trueValue,falseValue,func,ret) if(loggingEnabled) {const char* __eglDebugMessageFormatFunc__ = GEN_NON_STR_TO_STR(func);\
+	const char* retValue = ret == falseValue ? #falseValue : #trueValue;\
+	slog2fa(debugBuffer, 0, SLOG2_INFO, prefix "-%s() = %s", SLOG2_FA_STRING(__eglDebugMessageFormatFunc__), SLOG2_FA_STRING(retValue), SLOG2_FA_END);}
 
 #define GEN_DEBUG_FUNCCALL_FORMAT(prefix,func,paramFormat,...) if(loggingEnabled) {const char* __eglDebugMessageFormatFunc__ = GEN_NON_STR_TO_STR(func);\
 	slog2fa(debugBuffer, 0, SLOG2_INFO, prefix "-%s(" GEN_STR_TO_STR(paramFormat) ")", SLOG2_FA_STRING(__eglDebugMessageFormatFunc__), __VA_ARGS__, SLOG2_FA_END);}
