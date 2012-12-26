@@ -9,55 +9,35 @@
 
 #include <EGL.h>
 
-#ifndef TRUE
-#define TRUE 1
-#endif
-
-#ifndef FALSE
-#define FALSE 0
-#endif
-
-#ifndef NULL
-#define NULL 0
-#endif
+#include "DebugMacros.h"
 
 //Structure
+typedef struct _eglError {
+	const char* name;
+	EGLint value;
+} EGLError;
+
+#define EGL_MAX_ERRORS ((EGL_CONTEXT_LOST - EGL_SUCCESS) + 1)
+
 typedef struct _eglFunc {
 	const char* name;
 	__eglMustCastToProperFunctionPointerType function;
 	__eglMustCastToProperFunctionPointerType* functionPtr;
+	EGLError errors[EGL_MAX_ERRORS];
 
 	struct _eglFunc* next;
 } EGLFunction;
 
 //Macros
-#define STR_HELPER(x) #x
-#define STR_TO_STR(x) x
-#define NON_STR_TO_STR(x) STR_HELPER(x)
+#define EGL_DEBUG_PREFIX "EGL Debug"
 
-#define EGL_DEBUG_MESSAGE(func,message) if(loggingEnabled) {slog2c(debugBuffer, 0, SLOG2_INFO, "EGL Debug-" NON_STR_TO_STR(func) "-" STR_TO_STR(message));}
-#define EGL_DEBUG_MESSAGE_FORMAT(func,format,...) if(loggingEnabled) {const char* __eglDebugMessageFormatFunc__ = NON_STR_TO_STR(func);\
-	slog2fa(debugBuffer, 0, SLOG2_INFO, "EGL Debug-%s-" STR_TO_STR(format), SLOG2_FA_STRING(__eglDebugMessageFormatFunc__), __VA_ARGS__, SLOG2_FA_END);}
+#define EGL_DEBUG_MESSAGE(func,message) GEN_DEBUG_MESSAGE(EGL_DEBUG_PREFIX,func,message)
+#define EGL_DEBUG_MESSAGE_FORMAT(func,format,...) GEN_DEBUG_MESSAGE_FORMAT(EGL_DEBUG_PREFIX,func,format,__VA_ARGS__)
 
-#define EGL_DEBUG_FUNCCALL(func) if(loggingEnabled) {slog2c(debugBuffer, 0, SLOG2_INFO, "EGL Debug-" NON_STR_TO_STR(func) "()");}
-#define EGL_DEBUG_FUNCCALL_RET_STRING(func,ret) if(loggingEnabled) {const char* __eglDebugMessageFormatFunc__ = NON_STR_TO_STR(func);\
-	const char* retValue = ret;\
-	slog2fa(debugBuffer, 0, SLOG2_INFO, "EGL Debug-%s() = %s", SLOG2_FA_STRING(__eglDebugMessageFormatFunc__), SLOG2_FA_STRING(retValue), SLOG2_FA_END);}
-#define EGL_DEBUG_FUNCCALL_RET_SIGNED(func,ret) if(loggingEnabled) {const char* __eglDebugMessageFormatFunc__ = NON_STR_TO_STR(func);\
-	int retValue = ret;\
-	slog2fa(debugBuffer, 0, SLOG2_INFO, "EGL Debug-%s() = %d", SLOG2_FA_STRING(__eglDebugMessageFormatFunc__), SLOG2_FA_SIGNED(retValue), SLOG2_FA_END);}
-
-#define EGL_DEBUG_FUNCCALL_FORMAT(func,paramFormat,...) if(loggingEnabled) {const char* __eglDebugMessageFormatFunc__ = NON_STR_TO_STR(func);\
-	slog2fa(debugBuffer, 0, SLOG2_INFO, "EGL Debug-%s(" STR_TO_STR(paramFormat) ")", SLOG2_FA_STRING(__eglDebugMessageFormatFunc__), __VA_ARGS__, SLOG2_FA_END);}
-#define EGL_DEBUG_FUNCCALL_FORMAT_RET_STRING(func,paramFormat,ret,...) if(loggingEnabled) {const char* __eglDebugMessageFormatFunc__ = NON_STR_TO_STR(func);\
-	const char* retValue = ret;\
-	slog2fa(debugBuffer, 0, SLOG2_INFO, "EGL Debug-%s(" STR_TO_STR(paramFormat) ") = %s", SLOG2_FA_STRING(__eglDebugMessageFormatFunc__), __VA_ARGS__, SLOG2_FA_STRING(retValue), SLOG2_FA_END);}
-#define EGL_DEBUG_FUNCCALL_FORMAT_RET_SIGNED(func,paramFormat,ret,...) if(loggingEnabled) {const char* __eglDebugMessageFormatFunc__ = NON_STR_TO_STR(func);\
-	int retValue = ret;\
-	slog2fa(debugBuffer, 0, SLOG2_INFO, "EGL Debug-%s(" STR_TO_STR(paramFormat) ") = %d", SLOG2_FA_STRING(__eglDebugMessageFormatFunc__), __VA_ARGS__, SLOG2_FA_SIGNED(retValue), SLOG2_FA_END);}
-#define EGL_DEBUG_FUNCCALL_FORMAT_RET_PTR(func,paramFormat,ret,...) if(loggingEnabled) {const char* __eglDebugMessageFormatFunc__ = NON_STR_TO_STR(func);\
-	void* retValue = ret;\
-	slog2fa(debugBuffer, 0, SLOG2_INFO, "EGL Debug-%s(" STR_TO_STR(paramFormat) ") = %p", SLOG2_FA_STRING(__eglDebugMessageFormatFunc__), __VA_ARGS__, SLOG2_FA_STAR(retValue), SLOG2_FA_END);}
+#define EGL_DEBUG_FUNCCALL_FORMAT(func,paramFormat,...) GEN_DEBUG_FUNCCALL_FORMAT(EGL_DEBUG_PREFIX,func,paramFormat,__VA_ARGS__)
+#define EGL_DEBUG_FUNCCALL_FORMAT_RET_STRING(func,paramFormat,ret,...) GEN_DEBUG_FUNCCALL_FORMAT_RET_STRING(EGL_DEBUG_PREFIX,func,paramFormat,ret,__VA_ARGS__)
+#define EGL_DEBUG_FUNCCALL_FORMAT_RET_PTR(func,paramFormat,ret,...) GEN_DEBUG_FUNCCALL_FORMAT_RET_PTR(EGL_DEBUG_PREFIX,func,paramFormat,ret,__VA_ARGS__)
+#define EGL_DEBUG_FUNCCALL_FORMAT_RET_BOOL(func,paramFormat,ret,...) GEN_DEBUG_FUNCCALL_FORMAT_RET_BOOL(EGL_DEBUG_PREFIX,EGL_TRUE,EGL_FALSE,func,paramFormat,ret,__VA_ARGS__)
 
 #define EGLRUN_NRET(x,a) if(eglInit()) \
 {\
@@ -79,41 +59,50 @@ typedef struct _eglFunc {
 		goto INIT_ERROR;\
 	}
 
-#define EGLINIT_DEF_FIELD(x) x##Function x##Ptr = NULL;
+#define EGLFUNC_ERROR(x) {#x, x}
 
-#define EGLFUNC(x) x##Ptr
+#define EGLFUNCGROUP_NOPTR(x,next) {GEN_NON_STR_TO_STR(x), (__eglMustCastToProperFunctionPointerType)(x), NULL, {}, next}
+#define EGLFUNCGROUP(x,next) {GEN_NON_STR_TO_STR(x), (__eglMustCastToProperFunctionPointerType)(x), (__eglMustCastToProperFunctionPointerType*)&GEN_FUNCPTR(x), {}, next}
+#define EGLFUNCGROUP_ERRORS(x,next,...) {GEN_NON_STR_TO_STR(x), (__eglMustCastToProperFunctionPointerType)(x), (__eglMustCastToProperFunctionPointerType*)&GEN_FUNCPTR(x), {__VA_ARGS__}, next}
 
-#define EGLFUNCGROUP_NOPTR(x) NON_STR_TO_STR(x), (__eglMustCastToProperFunctionPointerType)(x), NULL
-#define EGLFUNCGROUP(x) NON_STR_TO_STR(x), (__eglMustCastToProperFunctionPointerType)(x), (__eglMustCastToProperFunctionPointerType*)&EGLFUNC(x)
+#define EGL_FIND_FUNC(x) __eglFindFunc(#x)
+#define EGL_CHECK_ERROR(x) __eglCheckErrors(#x, EGL_FIND_FUNC(x))
 
 //Function definitions
-typedef EGLint (*eglGetErrorFunction)(void);
+GEN_FUNC_DEF(eglGetError,EGLint,void)
+GEN_FUNC_DEF(eglGetDisplay,EGLDisplay,EGLNativeDisplayType display_id)
+GEN_FUNC_DEF(eglInitialize,EGLBoolean,EGLDisplay dpy, EGLint *major, EGLint *minor)
+GEN_FUNC_DEF(eglTerminate,EGLBoolean,EGLDisplay dpy)
 //TODO
-typedef EGLBoolean (*eglReleaseThreadFunction)(void);
+GEN_FUNC_DEF(eglReleaseThread,EGLBoolean,void)
 //TODO
-typedef __eglMustCastToProperFunctionPointerType (*eglGetProcAddressFunction)(const char*);
+GEN_FUNC_DEF(eglGetProcAddress,__eglMustCastToProperFunctionPointerType,const char* procname)
 
 //Function ptrs
-EGLINIT_DEF_FIELD(eglGetError)
+GEN_FUNCPTR_DEF(eglGetError)
+GEN_FUNCPTR_DEF(eglGetDisplay)
+GEN_FUNCPTR_DEF(eglInitialize)
+GEN_FUNCPTR_DEF(eglTerminate)
 //TODO
-EGLINIT_DEF_FIELD(eglReleaseThread)
+GEN_FUNCPTR_DEF(eglReleaseThread)
 //TODO
-EGLINIT_DEF_FIELD(eglGetProcAddress)
+GEN_FUNCPTR_DEF(eglGetProcAddress)
 
 //Library
-void* library = NULL;
-slog2_buffer_t debugBuffer = NULL;
-EGLBoolean loggingEnabled = EGL_TRUE;
+GLOBAL_FIELDS(EGLBoolean,EGL_TRUE)
 
 EGLFunction functions[] = {
-		{EGLFUNCGROUP(eglGetError), &functions[1]},
+		EGLFUNCGROUP(eglGetError, &functions[1]),
+		EGLFUNCGROUP(eglGetDisplay, &functions[2]),
+		EGLFUNCGROUP_ERRORS(eglInitialize, &functions[3], EGLFUNC_ERROR(EGL_BAD_DISPLAY), EGLFUNC_ERROR(EGL_NOT_INITIALIZED)),
+		EGLFUNCGROUP_ERRORS(eglTerminate, &functions[4], EGLFUNC_ERROR(EGL_BAD_DISPLAY)),
 		//TODO
-		{EGLFUNCGROUP(eglReleaseThread), &functions[2]},
+		EGLFUNCGROUP(eglReleaseThread, &functions[5]),
 		//TODO
-		{EGLFUNCGROUP(eglGetProcAddress), &functions[3]},
-		{EGLFUNCGROUP_NOPTR(eglIsDebugLibraryInitialized), &functions[4]},
-		{EGLFUNCGROUP_NOPTR(eglDebugEnableLogging), &functions[5]},
-		{EGLFUNCGROUP_NOPTR(eglDebugLog), NULL}
+		EGLFUNCGROUP(eglGetProcAddress, &functions[6]),
+		EGLFUNCGROUP_NOPTR(eglIsDebugLibraryInitialized, &functions[7]),
+		EGLFUNCGROUP_NOPTR(eglDebugEnableLogging, &functions[8]),
+		EGLFUNCGROUP_NOPTR(eglDebugLog, NULL)
 };
 
 //Setup
@@ -124,7 +113,7 @@ int eglInit()
 	{
 		return TRUE;
 	}
-	slog2c(debugBuffer, 0, SLOG2_INFO, "EGL Debug-Initializing");
+	slog2c(debugBuffer, 0, SLOG2_INFO, EGL_DEBUG_PREFIX "-Initializing");
 	library = dlopen("libEGL.so", RTLD_LAZY);
 	if(library)
 	{
@@ -137,38 +126,102 @@ int eglInit()
 				{
 					if(loggingEnabled)
 					{
-						slog2fa(debugBuffer, 0, SLOG2_INFO, "EGL Debug-%s-Failed to get ptr", SLOG2_FA_STRING(func->name), SLOG2_FA_END);
+						slog2fa(debugBuffer, 0, SLOG2_INFO, EGL_DEBUG_PREFIX "-%s-Failed to get ptr", SLOG2_FA_STRING(func->name), SLOG2_FA_END);
 					}
 					goto INIT_ERROR;
 				}
 			}
 		}
-		slog2c(debugBuffer, 0, SLOG2_INFO, "EGL Debug-Initialize complete");
+		slog2c(debugBuffer, 0, SLOG2_INFO, EGL_DEBUG_PREFIX "-Initialize complete");
 		return TRUE;
 
 	INIT_ERROR:
-		slog2c(debugBuffer, 0, SLOG2_ERROR, "EGL Debug-Initialize error");
+		slog2c(debugBuffer, 0, SLOG2_ERROR, EGL_DEBUG_PREFIX "-Initialize error");
 		dlclose(library);
 		library = NULL;
 	}
-	slog2c(debugBuffer, 0, SLOG2_ERROR, "EGL Debug-Initialization failed");
+	slog2c(debugBuffer, 0, SLOG2_ERROR, EGL_DEBUG_PREFIX "-Initialization failed");
 	return FALSE;
 }
 
-void eglCleanup()
+GEN_LIB_CLEANUP(eglCleanup,EGL_DEBUG_PREFIX)
+
+void __eglCheckErrors(const char* funcName, EGLFunction* func)
 {
-	if(library)
+	EGLError* err;
+	if(funcName && func && func->errors[0].value != NULL)
 	{
-		slog2c(debugBuffer, 0, SLOG2_INFO, "EGL Debug-Cleaning up");
-		dlclose(library);
-		library = NULL;
+		EGLint error = GEN_FUNCPTR(eglGetError)();
+		if(error != EGL_SUCCESS)
+		{
+			for(err = func->errors; err->value != NULL; err++)
+			{
+				if(err->value == error)
+				{
+					slog2fa(debugBuffer, 0, SLOG2_ERROR, EGL_DEBUG_PREFIX "-%s-Error: %s", SLOG2_FA_STRING(funcName), SLOG2_FA_STRING(err->name), SLOG2_FA_END);
+					return;
+				}
+			}
+			slog2fa(debugBuffer, 0, SLOG2_ERROR, EGL_DEBUG_PREFIX "-%s-Unknown error: %d", SLOG2_FA_STRING(funcName), SLOG2_FA_SIGNED(error), SLOG2_FA_END);
+		}
 	}
+}
+
+EGLFunction* __eglFindFunc(const char* funcName)
+{
+	EGLFunction* funcs;
+	for(funcs = functions; funcs; funcs = funcs->next)
+	{
+			if(strcmp(funcs->name, funcName) == 0)
+			{
+				return funcs;
+			}
+	}
+	return NULL;
 }
 
 //Functions
 EGLint eglGetError()
 {
-	EGLRUN_RET(EGLFUNC(eglGetError), (), EGL_NOT_INITIALIZED)
+	EGLRUN_RET(GEN_FUNCPTR(eglGetError), (), EGL_NOT_INITIALIZED)
+}
+
+EGLDisplay eglGetDisplay(EGLNativeDisplayType display_id)
+{
+	if(eglInit())
+	{
+		EGLDisplay disp = GEN_FUNCPTR(eglGetDisplay)(display_id);
+		EGL_DEBUG_FUNCCALL_FORMAT_RET_PTR(eglGetDisplay, "%p", disp, SLOG2_FA_STAR(display_id))
+		return disp;
+	}
+	EGL_DEBUG_MESSAGE(eglGetProcAddress, "Init failed")
+	return EGL_NO_DISPLAY;
+}
+
+EGLBoolean eglInitialize(EGLDisplay dpy, EGLint *major, EGLint *minor)
+{
+	if(eglInit())
+	{
+		EGLBoolean ret = GEN_FUNCPTR(eglInitialize)(dpy, major, minor);
+		EGL_DEBUG_FUNCCALL_FORMAT_RET_BOOL(eglInitialize, "%p, %p, %p", ret, SLOG2_FA_STAR(dpy), SLOG2_FA_STAR(major), SLOG2_FA_STAR(minor))
+		EGL_CHECK_ERROR(eglInitialize);
+		return ret;
+	}
+	EGL_DEBUG_MESSAGE(eglInitialize, "Init failed")
+	return EGL_FALSE;
+}
+
+EGLBoolean eglTerminate(EGLDisplay dpy)
+{
+	if(eglInit())
+	{
+		EGLBoolean ret = GEN_FUNCPTR(eglTerminate)(dpy);
+		EGL_DEBUG_FUNCCALL_FORMAT_RET_BOOL(eglTerminate, "%p", ret, SLOG2_FA_STAR(dpy))
+		EGL_CHECK_ERROR(eglInitialize);
+		return ret;
+	}
+	EGL_DEBUG_MESSAGE(eglTerminate, "Init failed")
+	return EGL_FALSE;
 }
 
 //TODO
@@ -177,12 +230,13 @@ EGLBoolean eglReleaseThread()
 {
 	if(eglInit())
 	{
-		EGLBoolean ret = EGLFUNC(eglReleaseThread)();
+		EGLBoolean ret = GEN_FUNCPTR(eglReleaseThread)();
 		const char* result = ret == EGL_FALSE ? "EGL_FALSE" : "EGL_TRUE";
 		EGL_DEBUG_MESSAGE_FORMAT(eglReleaseThread, "%s", SLOG2_FA_STRING(result))
 		eglCleanup();
 		return ret;
 	}
+	EGL_DEBUG_MESSAGE(eglReleaseThread, "Never init")
 	return EGL_FALSE;
 }
 
@@ -227,7 +281,7 @@ void eglDebugEnableLogging(EGLBoolean le)
 {
 	if(loggingEnabled)
 	{
-		const char* change = le == EGL_FALSE ? "EGL_FALSE" : "EGL_TRUE";
+		const char* change = GEN_BOOL_COMP_TO_STRING(le, EGL_TRUE, EGL_FALSE);
 		EGL_DEBUG_MESSAGE_FORMAT(eglDebugEnableLogging, "Changing logging enabled to: %s", SLOG2_FA_STRING(change))
 	}
 	loggingEnabled = le;
