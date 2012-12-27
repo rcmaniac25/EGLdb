@@ -747,6 +747,7 @@ __eglMustCastToProperFunctionPointerType eglGetProcAddress(const char* procname)
 		}
 		else
 		{
+			//TODO Figure out a way for OpenGL debug libs to talk with this (function call which passes callback. This calls callback, if NULL is returned, then eglGetProcAddressPtr is invoked)
 			EGL_DEBUG_MESSAGE(eglGetProcAddress,"Non-EGL function being looked up. Pass through")
 			__eglMustCastToProperFunctionPointerType ret = GEN_FUNCPTR(eglGetProcAddress)(procname);
 			EGL_DEBUG_FUNCCALL_ECHECK_FORMAT_RET_PTR(eglGetProcAddress, "%s", ret, SLOG2_FA_STRING(procname));
