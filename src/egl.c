@@ -77,6 +77,11 @@ typedef struct _eglFunc {
 #define EGL_CHECK_ERROR(x) __eglCheckErrors(#x, EGL_FIND_FUNC(x))
 #define EGL_INIT_FAILED(x) EGL_DEBUG_MESSAGE(x, "Init failed")
 
+#define EGL_UNKNOWN_VALUE_BUFFER char buffer[256];
+#define EGL_UNKNOWN_VALUE(format,bufferSet,...) memset(buffer, 0, sizeof(buffer));\
+	snprintf(buffer, sizeof(buffer), "Unknown value: " format, __VA_ARGS__);\
+	bufferSet = buffer;
+
 //Function definitions
 GEN_FUNC_DEF(EGLint,eglGetError,void)
 GEN_FUNC_DEF(EGLDisplay,eglGetDisplay,EGLNativeDisplayType display_id)
@@ -151,6 +156,7 @@ GEN_FUNCPTR_DEF(eglGetProcAddress)
 
 //Library
 GLOBAL_FIELDS(EGLBoolean,EGL_TRUE)
+//TODO: Figure out reference counter so that library isn't unloaded when it might still be in use
 
 EGLFunction functions[] = {
 		EGLFUNCGROUP(eglGetError, &functions[1]),
@@ -441,7 +447,8 @@ EGLBoolean eglBindAPI(EGLenum api)
 	{
 		EGLBoolean ret = GEN_FUNCPTR(eglBindAPI)(api);
 		const char* apiStr;
-		switch(ret)
+		EGL_UNKNOWN_VALUE_BUFFER
+		switch(api)
 		{
 			case EGL_OPENGL_ES_API:
 				apiStr = GEN_STR_HELPER(EGL_OPENGL_ES_API);
@@ -453,7 +460,7 @@ EGLBoolean eglBindAPI(EGLenum api)
 				apiStr = GEN_STR_HELPER(EGL_OPENGL_API);
 				break;
 			default:
-				apiStr = "?"; //XXX Get the value
+				EGL_UNKNOWN_VALUE("%d", apiStr, api)
 				break;
 		}
 		EGL_DEBUG_FUNCCALL_ECHECK_FORMAT_RET_BOOL(eglBindAPI, "%s", ret, SLOG2_FA_STRING(apiStr))
@@ -468,6 +475,7 @@ EGLenum eglQueryAPI()
 	{
 		EGLenum ret = GEN_FUNCPTR(eglQueryAPI)();
 		const char* api;
+		EGL_UNKNOWN_VALUE_BUFFER
 		switch(ret)
 		{
 			case EGL_OPENGL_ES_API:
@@ -480,7 +488,7 @@ EGLenum eglQueryAPI()
 				api = GEN_STR_HELPER(EGL_OPENGL_API);
 				break;
 			default:
-				api = "?"; //XXX Get the value
+				EGL_UNKNOWN_VALUE("%d", api, ret)
 				break;
 		}
 		EGL_DEBUG_FUNCCALL_RET_STRING(eglQueryAPI,api)
@@ -624,6 +632,7 @@ EGLSurface eglGetCurrentSurface(EGLint readdraw)
 	{
 		EGLSurface surf = GEN_FUNCPTR(eglGetCurrentSurface)(readdraw);
 		const char* param;
+		EGL_UNKNOWN_VALUE_BUFFER
 		switch(readdraw)
 		{
 			case EGL_DRAW:
@@ -633,7 +642,7 @@ EGLSurface eglGetCurrentSurface(EGLint readdraw)
 				param = GEN_STR_HELPER(EGL_READ);
 				break;
 			default:
-				param = "?"; //XXX Get the value
+				EGL_UNKNOWN_VALUE("%d", param, readdraw)
 				break;
 		}
 		EGL_DEBUG_FUNCCALL_ECHECK_FORMAT_RET_PTR(eglGetCurrentSurface, "%s", surf, SLOG2_FA_STRING(param))
@@ -723,16 +732,25 @@ __eglMustCastToProperFunctionPointerType eglGetProcAddress(const char* procname)
 	}
 	if(eglInit())
 	{
-		for(func = functions; func; func = func->next)
+		if(strstr(procname, "egl") == procname)
 		{
-			if(strcmp(func->name, procname) == 0)
+			for(func = functions; func; func = func->next)
 			{
-				EGL_DEBUG_FUNCCALL_FORMAT_RET_PTR(eglGetProcAddress, "%s", func->function, SLOG2_FA_STRING(procname))
-				return func->function;
+				if(strcmp(func->name, procname) == 0)
+				{
+					EGL_DEBUG_FUNCCALL_FORMAT_RET_PTR(eglGetProcAddress, "%s", func->function, SLOG2_FA_STRING(procname))
+					return func->function;
+				}
 			}
+			EGL_DEBUG_MESSAGE_FORMAT(eglGetProcAddress, "Could not find %s", SLOG2_FA_STRING(procname))
+			return NULL;
 		}
-		EGL_DEBUG_MESSAGE_FORMAT(eglGetProcAddress, "Could not find %s", SLOG2_FA_STRING(procname))
-		return NULL;
+		else
+		{
+			EGL_DEBUG_MESSAGE(eglGetProcAddress,"Non-EGL function being looked up. Pass through")
+			__eglMustCastToProperFunctionPointerType ret = GEN_FUNCPTR(eglGetProcAddress)(procname);
+			EGL_DEBUG_FUNCCALL_ECHECK_FORMAT_RET_PTR(eglGetProcAddress, "%s", ret, SLOG2_FA_STRING(procname));
+		}
 	}
 	EGL_INIT_FAILED(eglGetProcAddress)
 	return NULL;
